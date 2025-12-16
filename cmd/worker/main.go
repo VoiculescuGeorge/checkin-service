@@ -1,1 +1,1 @@
-// Entry point for Async Worker
+package worker

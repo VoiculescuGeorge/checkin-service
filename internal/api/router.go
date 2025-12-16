@@ -1,22 +1,31 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
+
+	"checkin.service/internal/api/handler"
+	checkin_service "checkin.service/internal/core"
 )
 
-func NewRouter() *mux.Router {
+// NewRouter sets up the gorilla/mux router and defines all API routes.
+func NewRouter(service checkin_service.CheckInService) *mux.Router {
+
+	checkInHandler := handler.CheckInHandler{
+		Service: service,
+	}
+
 	r := mux.NewRouter()
-	r.HandleFunc("/checkin/{employeeId}", CheckInHandler).Methods("POST")
+	
+	api := r.PathPrefix("/api/v1").Subrouter()
+
+	api.HandleFunc("/checkin-checkout", checkInHandler.CheckInOut).Methods(http.MethodPost)
+
+	api.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Service is operational."))
+	}).Methods(http.MethodGet)
+
 	return r
-}
-
-func CheckInHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	employeeId := vars["employeeId"]
-	
-	
-
 }
