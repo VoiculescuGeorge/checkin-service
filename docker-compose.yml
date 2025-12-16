@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:13-alpine
+    container_name: checkin_db
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=checkin_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - checkin_db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  checkin_db_data:
