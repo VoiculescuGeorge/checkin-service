@@ -12,7 +12,7 @@ import (
 	"checkin.service/internal/core/model"
 	"checkin.service/internal/ports/messaging"
 	"checkin.service/internal/ports/repository"
-	"checkin.service/internal/worker/legacyapi"
+	"checkin.service/internal/worker/legacyAPI"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/sony/gobreaker"
 )
@@ -21,13 +21,13 @@ import (
 // It uses a circuit breaker to avoid hammering the legacy system if it's having issues.
 type LaberProcessor struct {
 	Repo      repository.Repository
-	legacyAPI legacyapi.LegacyAPIClient
+	legacyapi legacyAPI.LegacyAPIClient
 	cb        *gobreaker.CircuitBreaker
 }
 
 // NewProcessor creates a new processor for the labor queue. It sets up a
 // circuit breaker to protect the legacy API from being overwhelmed.
-func NewProcessor(r repository.Repository, legacyAPI legacyapi.LegacyAPIClient) *LaberProcessor {
+func NewProcessor(r repository.Repository, legacyapi legacyAPI.LegacyAPIClient) *LaberProcessor {
 	settings := gobreaker.Settings{
 		Name:        "Legacy-API",
 		MaxRequests: 5,
@@ -42,7 +42,7 @@ func NewProcessor(r repository.Repository, legacyAPI legacyapi.LegacyAPIClient) 
 
 	return &LaberProcessor{
 		Repo:      r,
-		legacyAPI: legacyAPI,
+		legacyapi: legacyapi,
 		cb:        gobreaker.NewCircuitBreaker(settings),
 	}
 }
@@ -68,7 +68,7 @@ func (p *LaberProcessor) Process(ctx context.Context, msg types.Message) (bool, 
 	}
 
 	_, err = p.cb.Execute(func() (interface{}, error) {
-		return nil, p.legacyAPI.RecordCheckOut(ctx, event)
+		return nil, p.legacyapi.RecordCheckOut(ctx, event)
 	})
 
 	if err != nil {

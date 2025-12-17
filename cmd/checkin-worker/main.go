@@ -11,7 +11,7 @@ import (
 	"checkin.service/internal/ports/repository"
 	"checkin.service/internal/worker"
 	"checkin.service/internal/worker/labor"
-	"checkin.service/internal/worker/legacyapi"
+	"checkin.service/internal/worker/legacyAPI"
 	"checkin.service/pkg/database"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -43,12 +43,12 @@ func main() {
 
 	repo := repository.NewWorkingTimeRepository(db)
 
-	legacyClient := legacyapi.NewHTTPClient(cfg.LegacyAPIURL)
+	legacyClient := legacyAPI.NewHTTPClient(cfg.LegacyAPIURL)
 	processor := labor.NewProcessor(repo, legacyClient)
 
 	// Start Worker
 	ctx, cancel := context.WithCancel(context.Background())
-	app := worker.NewWorker(sqsClient, cfg.LaborSQSQueueURL, processor) 
+	app := worker.NewWorker(sqsClient, cfg.LaborSQSQueueURL, processor)
 
 	go func() {
 		app.Start(ctx)

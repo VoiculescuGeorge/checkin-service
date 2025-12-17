@@ -82,7 +82,7 @@ func (w *Worker) handleMessage(ctx context.Context, msg types.Message) {
 			QueueUrl:      &w.queueURL,
 			ReceiptHandle: msg.ReceiptHandle,
 		})
-	} else if err != nil {
+	} else {
 		// An unrecoverable error occurred (e.g., bad message format).
 		log.Printf("Unrecoverable error processing message, will not retry. Error: %v", err)
 	}
