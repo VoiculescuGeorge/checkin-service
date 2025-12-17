@@ -1,11 +1,15 @@
-CREATE TABLE IF NOT EXISTS working_times (
-    id SERIAL PRIMARY KEY,
-    employee_id VARCHAR(255) NOT NULL,
-    clock_in_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    clock_out_time TIMESTAMP WITH TIME ZONE,
-    hours_worked NUMERIC,
-    status VARCHAR(50) NOT NULL,
-    retry_count INTEGER NOT NULL DEFAULT 0
+CREATE TABLE working_times (
+    id BIGSERIAL PRIMARY KEY,
+    employee_id VARCHAR(50) NOT NULL,
+    clock_in_time TIMESTAMP NOT NULL,
+    clock_out_time TIMESTAMP,
+    hours_worked NUMERIC(5, 2),
+    labor_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    email_status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    labor_retry_count INT NOT NULL DEFAULT 0,
+    email_retry_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_working_times_employee_id ON working_times (employee_id);
+CREATE INDEX idx_labor_pending ON working_times(labor_status) WHERE labor_status = 'PENDING';
+CREATE INDEX idx_email_pending ON working_times(email_status) WHERE email_status = 'PENDING';

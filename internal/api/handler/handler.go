@@ -28,7 +28,7 @@ func (h *CheckInHandler) CheckInOut(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := h.Service.CheckInOut(r.Context(), req.EmployeeID)
+	err := h.Service.ProcessCheckInOut(r.Context(), req.EmployeeID)
 
 	if err != nil {
 		http.Error(w, "Service error processing event", http.StatusInternalServerError)
@@ -36,8 +36,5 @@ func (h *CheckInHandler) CheckInOut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-	json.NewEncoder(w).Encode(map[string]any{
-		"message":      "Check-in/out event recorded for asynchronous processing.",
-		"checkInOutID": id.ID,
-	})
+	json.NewEncoder(w).Encode(map[string]any{"message": "Check-in/out event recorded for asynchronous processing."})
 }

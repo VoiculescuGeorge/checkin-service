@@ -13,8 +13,11 @@ import (
 	"checkin.service/internal/api"
 	"checkin.service/internal/config"
 	checkin_service "checkin.service/internal/core"
+	"checkin.service/internal/ports/messaging"
 	"checkin.service/internal/ports/repository"
 	"checkin.service/pkg/database"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
 
@@ -30,13 +33,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening database: %v", err)
 	}
-
 	defer db.Close()
 	log.Println("Successfully connected to the database.")
 
+	// AWS SDK Config
+	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), awsconfig.WithRegion(cfg.AWSRegion))
+	if err != nil {
+		log.Fatalf("unable to load SDK config: %v", err)
+	}
+
 	// Initialize dependencies
+	sqsClient := sqs.NewFromConfig(awsCfg)
 	repo := repository.NewWorkingTimeRepository(db)
-	coreService := checkin_service.NewCheckInService(repo)
+	producer := messaging.NewSQSProducer(sqsClient, cfg.LaborSQSQueueURL, cfg.EmailSQSQueueURL)
+	coreService := checkin_service.NewCheckInService(repo, *producer)
 
 	// Setup router and server
 	router := api.NewRouter(*coreService)

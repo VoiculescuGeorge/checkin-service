@@ -8,12 +8,15 @@ import (
 	"checkin.service/internal/core/model"
 )
 
-// Repository is the interface defining the contract for data access.
+// Repository contract
 type Repository interface {
+	GetCheckInOut(ctx context.Context, id int64) (*model.WorkingTime, error)
 	CreateCheckIn(ctx context.Context, employeeID string, clockIn time.Time) (int64, error)
 	UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64) error
-	UpdateStatus(ctx context.Context, id int64, status model.WorkingTimeStatus, retryCount int) error
+	UpdateLaborStatus(ctx context.Context, id int64, status model.WorkingTimeStatus, retryCount int) error
 	FindLastCheckIn(ctx context.Context, employeeID string) (*model.WorkingTime, error)
+	GetStatus(ctx context.Context, id int64) (model.WorkingTimeStatus, error)
+	UpdateEmailStatus(ctx context.Context, id int64, status model.EmailStatus, retryCount int) error
 }
 
 // WorkingTimeRepository is the concrete implementation for a PostgreSQL database.
@@ -21,19 +24,19 @@ type WorkingTimeRepository struct {
 	DB *sql.DB
 }
 
-// NewWorkingTimeRepository creates a new instance of the repository.
+// NewWorkingTimeRepository create new instance
 func NewWorkingTimeRepository(db *sql.DB) Repository {
 	return &WorkingTimeRepository{DB: db}
 }
 
-// CreateCheckIn implements the Repository interface.
+// CreateCheckIn create checkin.
 func (r *WorkingTimeRepository) CreateCheckIn(ctx context.Context, employeeID string, clockIn time.Time) (int64, error) {
 
 	var id int64
 	query := `INSERT INTO working_times (employee_id, clock_in_time, status, retry_count) 
               VALUES ($1, $2, $3, 0) RETURNING id`
 
-	err := r.DB.QueryRowContext(ctx, query, employeeID, clockIn, model.StatusPending).Scan(&id)
+	err := r.DB.QueryRowContext(ctx, query, employeeID, clockIn, model.StatusWorkingPending).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -41,22 +44,22 @@ func (r *WorkingTimeRepository) CreateCheckIn(ctx context.Context, employeeID st
 	return id, nil
 }
 
-// UpdateCheckOut implements the Repository interface.
+// UpdateCheckOut do checkout.
 func (r *WorkingTimeRepository) UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64) error {
 
 	query := `UPDATE working_times 
               SET clock_out_time = $1, 
                   hours_worked = $2, 
-                  status = $3
+                  labor_status = $3
               WHERE id = $4`
 
-	_, err := r.DB.ExecContext(ctx, query, clockOut, hoursWorked, model.StatusPending, id)
+	_, err := r.DB.ExecContext(ctx, query, clockOut, hoursWorked, model.StatusWorkingPending, id)
 
 	return err
 }
 
-// UpdateStatus implements the Repository interface.
-func (r *WorkingTimeRepository) UpdateStatus(ctx context.Context, id int64, status model.WorkingTimeStatus, retryCount int) error {
+// UpdateLaborStatus updates the status and retry count for a labor-related job.
+func (r *WorkingTimeRepository) UpdateLaborStatus(ctx context.Context, id int64, status model.WorkingTimeStatus, retryCount int) error {
 
 	query := `UPDATE working_times 
               SET status = $1, 
@@ -68,7 +71,7 @@ func (r *WorkingTimeRepository) UpdateStatus(ctx context.Context, id int64, stat
 	return err
 }
 
-// FindLastCheckIn implements the Repository interface.
+// FindLastCheckIn get last check in for a employee
 func (r *WorkingTimeRepository) FindLastCheckIn(ctx context.Context, employeeID string) (*model.WorkingTime, error) {
 
 	var clockIn time.Time
@@ -81,7 +84,7 @@ func (r *WorkingTimeRepository) FindLastCheckIn(ctx context.Context, employeeID 
               LIMIT 1`
 
 	row := r.DB.QueryRowContext(ctx, query, employeeID)
-	err := row.Scan(&wt.ID, &clockIn, &wt.Status, &wt.RetryCount)
+	err := row.Scan(&wt.ID, &clockIn, &wt.LaborStatus, &wt.RetryCount)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -91,4 +94,39 @@ func (r *WorkingTimeRepository) FindLastCheckIn(ctx context.Context, employeeID 
 
 	wt.ClockInTime = clockIn
 	return wt, nil
+}
+
+// GetStatus retrieves just the status of a specific work record.
+func (r *WorkingTimeRepository) GetStatus(ctx context.Context, id int64) (model.WorkingTimeStatus, error) {
+	var status model.WorkingTimeStatus
+	query := `SELECT status FROM working_times WHERE id = $1`
+
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(&status)
+	if err != nil {
+		return "", err
+	}
+
+	return status, nil
+}
+
+// GetCheckInOut fetches a complete working_times record by its ID.
+func (r *WorkingTimeRepository) GetCheckInOut(ctx context.Context, id int64) (*model.WorkingTime, error) {
+	query := `SELECT id, employee_id, status, retry_count, hours_worked 
+	          FROM working_times WHERE id = $1`
+
+	wt := &model.WorkingTime{}
+	err := r.DB.QueryRowContext(ctx, query, id).Scan(
+		&wt.ID, &wt.EmployeeID, &wt.LaborStatus, &wt.RetryCount, &wt.HoursWorked,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return wt, nil
+}
+
+// UpdateEmailStatus updates the status and retry count for an email-related job.
+func (r *WorkingTimeRepository) UpdateEmailStatus(ctx context.Context, id int64, status model.EmailStatus, retryCount int) error {
+	query := `UPDATE working_times SET email_status = $1, email_retry_count = $2 WHERE id = $3`
+	_, err := r.DB.ExecContext(ctx, query, status, retryCount, id)
+	return err
 }
