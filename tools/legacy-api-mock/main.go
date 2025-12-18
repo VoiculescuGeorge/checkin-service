@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 )
 
 // A simple struct to capture the incoming event data
 type CheckOutEvent struct {
-	WorkingTimeID int64   `json:"working_time_id"`
-	EmployeeID    string  `json:"employee_id"`
-	HoursWorked   float64 `json:"hours_worked"`
+	WorkingTimeID int64     `json:"workingTimeId"`
+	EmployeeID    string    `json:"employeeId"`
+	HoursWorked   float64   `json:"hoursWorked"`
+	ClockOutTime  time.Time `json:"clockOutTime"`
 }
 
 func checkoutHandler(w http.ResponseWriter, r *http.Request) {

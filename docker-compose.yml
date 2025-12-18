@@ -40,7 +40,7 @@ services:
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
       - LABOR_SQS_QUEUE_URL=http://localstack:4566/000000000000/labor-queue
-      - LEGACY_API_URL=http://localhost:8081
+      - LEGACY_API_URL=http://legacy-api:8081
       - AWS_ENDPOINT=http://localstack:4566
     restart: on-failure
     networks:

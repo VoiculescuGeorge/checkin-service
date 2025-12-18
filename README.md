@@ -138,6 +138,105 @@ Since SQS guarantees "at-least-once" delivery, workers perform a **Check-then-Ac
 
 ---
 
+# Local Development & Testing Guide
+
+This guide provides all the necessary steps to run, interact with, and verify the `checkin-service` application on your local machine using Docker Compose.
+
+### 1. Prerequisites
+
+Before you begin, ensure you have the following software installed:
+*   **Docker** and **Docker Compose**: The easiest way to get both is by installing Docker Desktop.
+
+### 2. Running the Application
+
+Navigate to the root directory of the project (`c:\Dev\checkin-service\`) in your terminal and run the following command to build the application images and start all services.
+
+```bash
+docker-compose up --build
+```
+
+*   `docker-compose up`: Starts all services defined in `docker-compose.yml`.
+*   `--build`: Forces a rebuild of the Go application images, which is essential after making code changes.
+
+You will see logs from all services streaming in your terminal. To run the services in the background (detached mode), you can add the `-d` flag:
+
+```bash
+docker-compose up -d --build
+```
+
+### 3. Interacting with the API
+
+Once the services are running, the main API is exposed on `http://localhost:8080`. You can use a tool like `curl` to send requests.
+
+#### Check-In an Employee
+Send a `POST` request to the `/check-in` endpoint to simulate a worker clocking in.
+
+```bash
+curl -X POST http://localhost:8080/check-in -H "Content-Type: application/json" -d '{"employee_id": "emp-123"}'
+```
+
+#### Check-Out an Employee
+Send a `POST` request to the `/check-out` endpoint to simulate the same worker clocking out.
+
+```bash
+curl -X POST http://localhost:8080/check-out -H "Content-Type: application/json" -d '{"employee_id": "emp-123"}'
+```
+
+### 4. Verifying the Workflow
+
+After interacting with the API, you can inspect the different parts of the system to verify that the asynchronous workflows have been triggered.
+
+#### Check the Database
+You can connect to the PostgreSQL database from your host machine using any database client (like DBeaver, pgAdmin, or `psql`).
+
+*   **Host**: `localhost`
+*   **Port**: `5432`
+*   **User**: `user`
+*   **Password**: `password`
+*   **Database**: `checkin_db`
+
+Run a query to see the records and their processing statuses:
+```sql
+SELECT id, employee_id, labor_status, email_status, clock_in_time, clock_out_time FROM working_times;
+```
+
+#### Check the SQS Queues
+You can inspect the messages in the SQS queues managed by LocalStack using `awslocal` inside the `localstack` container.
+
+To see messages in the **labor queue**:
+```bash
+docker exec checkin_localstack awslocal sqs receive-message --queue-url http://localhost:4566/000000000000/labor-queue
+```
+
+To check the **dead-letter queue** if a message fails processing multiple times:
+```bash
+docker exec checkin_localstack awslocal sqs receive-message --queue-url http://localhost:4566/000000000000/labor-queue-dlq
+```
+
+#### View Service Logs
+To view the real-time logs for a specific service, use the `docker logs` command with the `-f` (follow) flag.
+
+For example, to see what the `checkin-worker` is doing:
+```bash
+docker logs -f checkin_worker
+```
+
+### 5. Stopping the Application
+
+When you are finished, you can stop all the running containers from the project's root directory.
+
+```bash
+docker-compose down
+```
+
+If you also want to remove the database data (the `checkin_db_data` volume), add the `-v` flag:
+
+```bash
+docker-compose down -v
+```
+
+---
+
 # AI Usage:
 - Eraser.io: To generate a nice looking diagram. Input: the core flow of the app as a text
 - Gemini plugin for VSC: 
@@ -147,7 +246,6 @@ Since SQS guarantees "at-least-once" delivery, workers perform a **Check-then-Ac
     - Generate mock api
 - Copilot to generate commit messages (Github desktop)
 
-
+--- 
 # Improvements
-- Use goroutines for concurency for sqs queue workers
 - Add openTelemetry and Prometheus logic to track and create custom metrics
