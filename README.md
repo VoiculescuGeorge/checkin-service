@@ -169,17 +169,17 @@ docker-compose up -d --build
 Once the services are running, the main API is exposed on `http://localhost:8080`. You can use a tool like `curl` to send requests.
 
 #### Check-In an Employee
-Send a `POST` request to the `/check-in` endpoint to simulate a worker clocking in.
+Send a `POST` request to the `/checkin-checkout` endpoint to simulate a worker clocking in.
 
 ```bash
-curl -X POST http://localhost:8080/check-in -H "Content-Type: application/json" -d '{"employee_id": "emp-123"}'
+curl -X POST localhost:8080/api/v1/checkin-checkout -H "Content-Type: application/json" -d '{"employee_id": "emp-123"}'
 ```
 
 #### Check-Out an Employee
-Send a `POST` request to the `/check-out` endpoint to simulate the same worker clocking out.
+Send a `POST` request to the `/checkin-checkout` endpoint to simulate the same worker clocking out.
 
 ```bash
-curl -X POST http://localhost:8080/check-out -H "Content-Type: application/json" -d '{"employee_id": "emp-123"}'
+curl -X POST localhost:8080/api/v1/checkin-checkout -H "Content-Type: application/json" -d '{"employee_id": "emp-123"}'
 ```
 
 ### 4. Verifying the Workflow
