@@ -11,7 +11,7 @@ import (
 	"checkin.service/internal/ports/repository"
 	"checkin.service/internal/worker"
 	"checkin.service/internal/worker/labor"
-	"checkin.service/internal/worker/legacyAPI"
+	legacyAPI "checkin.service/internal/worker/legacyapi"
 	"checkin.service/pkg/database"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"

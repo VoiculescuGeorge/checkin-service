@@ -12,7 +12,7 @@ import (
 	"checkin.service/internal/core/model"
 	"checkin.service/internal/ports/messaging"
 	"checkin.service/internal/ports/repository"
-	"checkin.service/internal/worker/legacyAPI"
+	legacyAPI "checkin.service/internal/worker/legacyapi"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/sony/gobreaker"
 )

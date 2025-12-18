@@ -1,4 +1,68 @@
 services:
+  api:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.api
+    container_name: checkin_api
+    ports:
+      - "8080:8080"
+    depends_on: # Wait for the db to be healthy before starting
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://user:password@db:5432/checkin_db?sslmode=disable
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/labor-queue
+      - AWS_ENDPOINT=http://localstack:4566
+    restart: on-failure
+    networks:
+      - app-network
+      - db-network
+
+  checkin-worker:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.checkin-worker      
+    container_name: checkin_worker
+    depends_on:
+      - localstack
+      - legacy-api
+      - db
+    environment:
+      - DATABASE_URL=postgres://user:password@db:5432/checkin_db?sslmode=disable
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/labor-queue
+      - LEGACY_API_URL=http://legacy-api:8080
+      - AWS_ENDPOINT=http://localstack:4566
+    restart: on-failure
+    networks:
+      - app-network
+      - db-network
+
+  email-worker:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.email-worker
+    container_name: email_worker
+    depends_on:
+      - localstack
+      - db
+    environment:
+      - DATABASE_URL=postgres://user:password@db:5432/checkin_db?sslmode=disable
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/email-queue
+      - AWS_ENDPOINT=http://localstack:4566
+    restart: on-failure
+    networks:
+      - app-network
+      - db-network
+
   db:
     image: postgres:13-alpine
     container_name: checkin_db
@@ -12,6 +76,44 @@ services:
     volumes:
       - checkin_db_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d checkin_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - db-network
+
+  localstack:
+    image: localstack/localstack:3
+    container_name: checkin_localstack
+    ports:
+      - "4566:4566" # Main endpoint for all services
+    environment:
+      - SERVICES=sqs
+      - DEBUG=1
+      - LOCALSTACK_AUTH_TOKEN=
+    volumes:
+      - ./tools/localstack:/etc/localstack/init/ready.d
+    networks:
+      - app-network
+
+  legacy-api:
+    build:
+      context: .
+      dockerfile: ./tools/legacy-api-mock/Dockerfile
+    container_name: checkin_legacy_api
+    ports:
+      - "8081:8080"
+    networks:
+      - app-network
 
 volumes:
   checkin_db_data:
+
+networks:
+  app-network:
+    driver: bridge
+  db-network:
+    driver: bridge
+    internal: true

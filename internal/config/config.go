@@ -23,7 +23,7 @@ type Config struct {
 
 // LoadConfig reads configuration from file or environment variables.
 func LoadConfig() (config Config, err error) {
-	viper.SetDefault("DB_HOST", "localhost")
+	viper.SetDefault("DB_HOST", "db")
 	viper.SetDefault("DB_PORT", "5432")
 	viper.SetDefault("DB_USER", "user")
 	viper.SetDefault("DB_PASSWORD", "password")

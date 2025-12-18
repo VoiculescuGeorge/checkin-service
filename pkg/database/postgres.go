@@ -3,9 +3,10 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	"checkin.service/internal/config"
-	_ "github.com/jackc/pgx/v5/stdlib" 
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // NewConnection creates and verifies a new database connection pool.
@@ -18,7 +19,7 @@ func NewConnection(cfg config.Config) (*sql.DB, error) {
 		cfg.DBPassword,
 		cfg.DBName,
 	)
-
+	log.Println(psqlInfo)
 	db, err := sql.Open("pgx", psqlInfo)
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)
