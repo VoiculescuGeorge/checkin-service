@@ -15,8 +15,8 @@ import (
 	checkin_service "checkin.service/internal/core"
 	"checkin.service/internal/ports/messaging"
 	"checkin.service/internal/ports/repository"
+	"checkin.service/pkg/aws"
 	"checkin.service/pkg/database"
-	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 )
@@ -37,7 +37,7 @@ func main() {
 	log.Println("Successfully connected to the database.")
 
 	// AWS SDK Config
-	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), awsconfig.WithRegion(cfg.AWSRegion))
+	awsCfg, err := aws.NewAWSConfig(context.Background(), cfg)
 	if err != nil {
 		log.Fatalf("unable to load SDK config: %v", err)
 	}

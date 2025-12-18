@@ -18,6 +18,7 @@ type Config struct {
 	AWSRegion        string `mapstructure:"AWS_REGION"`
 	LaborSQSQueueURL string `mapstructure:"LABOR_SQS_QUEUE_URL"`
 	EmailSQSQueueURL string `mapstructure:"EMAIL_SQS_QUEUE_URL"`
+	AWSEndpoint      string `mapstructure:"AWS_ENDPOINT"`
 	LegacyAPIURL     string `mapstructure:"LEGACY_API_URL"`
 }
 
@@ -29,10 +30,11 @@ func LoadConfig() (config Config, err error) {
 	viper.SetDefault("DB_PASSWORD", "password")
 	viper.SetDefault("DB_NAME", "checkin_db")
 	viper.SetDefault("SERVER_PORT", "8080")
-	viper.SetDefault("AWS_REGION", "us-east-1")
-	viper.SetDefault("LABOR_SQS_QUEUE_URL", "")
-	viper.SetDefault("EMAIL_SQS_QUEUE_URL", "")
-	viper.SetDefault("LEGACY_API_URL", "http://localhost:8081/legacy/record")
+	viper.SetDefault("AWS_REGION", "us-east-1") // Default region for AWS services
+	viper.SetDefault("LABOR_SQS_QUEUE_URL", "http://localstack:4566/000000000000/labor-queue")
+	viper.SetDefault("EMAIL_SQS_QUEUE_URL", "http://localstack:4566/000000000000/email-queue")
+	viper.SetDefault("AWS_ENDPOINT", "http://localstack:4566")
+	viper.SetDefault("LEGACY_API_URL", "http://localhost:8081/")
 
 	// Read in environment variables that match the keys.
 	viper.AutomaticEnv()

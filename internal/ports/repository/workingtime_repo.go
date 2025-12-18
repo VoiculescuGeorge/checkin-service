@@ -33,10 +33,10 @@ func NewWorkingTimeRepository(db *sql.DB) Repository {
 func (r *WorkingTimeRepository) CreateCheckIn(ctx context.Context, employeeID string, clockIn time.Time) (int64, error) {
 
 	var id int64
-	query := `INSERT INTO working_times (employee_id, clock_in_time, status, retry_count) 
-              VALUES ($1, $2, $3, 0) RETURNING id`
+	query := `INSERT INTO working_times (employee_id, clock_in_time, labor_status, labor_retry_count, email_status, email_retry_count) 
+              VALUES ($1, $2, $3, 0, $4, 0) RETURNING id`
 
-	err := r.DB.QueryRowContext(ctx, query, employeeID, clockIn, model.StatusWorkingPending).Scan(&id)
+	err := r.DB.QueryRowContext(ctx, query, employeeID, clockIn, model.StatusWorkingPending, model.StatusEmailPending).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -62,8 +62,8 @@ func (r *WorkingTimeRepository) UpdateCheckOut(ctx context.Context, id int64, cl
 func (r *WorkingTimeRepository) UpdateLaborStatus(ctx context.Context, id int64, status model.WorkingTimeStatus, retryCount int) error {
 
 	query := `UPDATE working_times 
-              SET status = $1, 
-                  retry_count = $2 
+              SET labor_status = $1, 
+                  labor_retry_count = $2 
               WHERE id = $3`
 
 	_, err := r.DB.ExecContext(ctx, query, status, retryCount, id)
@@ -77,14 +77,14 @@ func (r *WorkingTimeRepository) FindLastCheckIn(ctx context.Context, employeeID 
 	var clockIn time.Time
 	wt := &model.WorkingTime{EmployeeID: employeeID}
 
-	query := `SELECT id, clock_in_time, status, retry_count
+	query := `SELECT id, clock_in_time, labor_status, labor_retry_count
               FROM working_times
               WHERE employee_id = $1 AND clock_out_time IS NULL
               ORDER BY clock_in_time DESC
               LIMIT 1`
 
 	row := r.DB.QueryRowContext(ctx, query, employeeID)
-	err := row.Scan(&wt.ID, &clockIn, &wt.LaborStatus, &wt.RetryCount)
+	err := row.Scan(&wt.ID, &clockIn, &wt.LaborStatus, &wt.LaborRetryCount)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -99,7 +99,7 @@ func (r *WorkingTimeRepository) FindLastCheckIn(ctx context.Context, employeeID 
 // GetStatus retrieves just the status of a specific work record.
 func (r *WorkingTimeRepository) GetStatus(ctx context.Context, id int64) (model.WorkingTimeStatus, error) {
 	var status model.WorkingTimeStatus
-	query := `SELECT status FROM working_times WHERE id = $1`
+	query := `SELECT labor_status FROM working_times WHERE id = $1`
 
 	err := r.DB.QueryRowContext(ctx, query, id).Scan(&status)
 	if err != nil {
@@ -111,12 +111,12 @@ func (r *WorkingTimeRepository) GetStatus(ctx context.Context, id int64) (model.
 
 // GetCheckInOut fetches a complete working_times record by its ID.
 func (r *WorkingTimeRepository) GetCheckInOut(ctx context.Context, id int64) (*model.WorkingTime, error) {
-	query := `SELECT id, employee_id, status, retry_count, hours_worked 
+	query := `SELECT id, employee_id, labor_status, labor_retry_count, email_status, email_retry_count, hours_worked 
 	          FROM working_times WHERE id = $1`
 
 	wt := &model.WorkingTime{}
 	err := r.DB.QueryRowContext(ctx, query, id).Scan(
-		&wt.ID, &wt.EmployeeID, &wt.LaborStatus, &wt.RetryCount, &wt.HoursWorked,
+		&wt.ID, &wt.EmployeeID, &wt.LaborStatus, &wt.LaborRetryCount, &wt.EmailStatus, &wt.EmailRetryCount, &wt.HoursWorked,
 	)
 	if err != nil {
 		return nil, err
