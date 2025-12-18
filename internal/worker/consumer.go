@@ -25,44 +25,74 @@ type Processor interface {
 type Worker struct {
 	client    SQSClient
 	queueURL  string
-	processor Processor
+	processor Processor // The logic to process a single message
+	// Concurrency controls how many messages can be processed at the same time.
+	Concurrency int
 }
 
 // NewWorker creates a new SQS worker, ready to be started.
 func NewWorker(client SQSClient, url string, proc Processor) *Worker {
-	return &Worker{client: client, queueURL: url, processor: proc}
+	return &Worker{
+		client:      client,
+		queueURL:    url,
+		processor:   proc,
+		Concurrency: 10, // Default to 10 concurrent processors
+	}
 }
 
 // Start kicks off the worker's main loop for polling the SQS queue.
 // It will run until the provided context is canceled.
 func (w *Worker) Start(ctx context.Context) {
-	log.Println("SQS Worker started. Polling for messages...")
+	log.Printf("SQS Worker started with %d concurrent processors. Polling for messages...", w.Concurrency)
+
+	messagesCh := make(chan types.Message, w.Concurrency)
+
+	// Start a pool of processor goroutines
+	for i := 0; i < w.Concurrency; i++ {
+		go w.processMessages(ctx, messagesCh)
+	}
+
+	// Start the poller in the main goroutine
+	w.pollMessages(ctx, messagesCh)
+}
+
+// pollMessages is the poller loop that fetches messages from SQS and sends them to a channel.
+func (w *Worker) pollMessages(ctx context.Context, messagesCh chan<- types.Message) {
+	defer close(messagesCh) // Close channel to signal processors to stop
 
 	for {
 		select {
 		case <-ctx.Done():
+			log.Println("Poller shutting down...")
 			return
 		default:
 			output, err := w.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
 				QueueUrl:            &w.queueURL,
-				MaxNumberOfMessages: 10,
+				MaxNumberOfMessages: int32(w.Concurrency), // Fetch as many messages as we have processors
 				WaitTimeSeconds:     20,
 			})
 			if err != nil {
 				log.Printf("Error receiving messages: %v", err)
 				continue
 			}
-
+			log.Printf("Received %d messages", len(output.Messages))
 			for _, msg := range output.Messages {
-				w.handleMessage(ctx, msg)
+				messagesCh <- msg
 			}
 		}
 	}
 }
 
-// handleMessage is where the real work happens for a single message. It calls the
-// processor and then decides whether to delete the message or make it visible again for a retry.
-func (w *Worker) handleMessage(ctx context.Context, msg types.Message) {
+// processMessages runs in a goroutine, listening for messages on a channel and processing them.
+func (w *Worker) processMessages(ctx context.Context, messagesCh <-chan types.Message) {
+	for msg := range messagesCh {
+		w.handleSingleMessage(ctx, msg)
+	}
+}
+
+// handleSingleMessage is where the real work happens for a single message. It calls the
+// processor and then decides whether to delete the message or change its visibility for a retry.
+func (w *Worker) handleSingleMessage(ctx context.Context, msg types.Message) {
 	shouldRetry, retryDelay, err := w.processor.Process(ctx, msg)
 
 	if err != nil && shouldRetry {
