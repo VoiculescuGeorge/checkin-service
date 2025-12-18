@@ -135,3 +135,19 @@ Since SQS guarantees "at-least-once" delivery, workers perform a **Check-then-Ac
     * `factory_checkin_total`: Counter for all check-in attempts (labeled by `status: success|failure`).
     * `legacy_api_request_duration_seconds`: Histogram of latency for the third-party integration.
     * `sqs_queue_depth`: Gauge updated by the worker to monitor lag.
+
+---
+
+# AI Usage:
+- Eraser.io: To generate a nice looking diagram. Input: the core flow of the app as a text
+- Gemini plugin for VSC: 
+    - To generate the docker-compose file and Dockerfiles for each service and localstack
+    - Fix errors on docker-compose up
+    - Fix errors on compile
+    - Generate mock api
+- Copilot to generate commit messages (Github desktop)
+
+
+# Improvements
+- Use goroutines for concurency for sqs queue workers
+- Add openTelemetry and Prometheus logic to track and create custom metrics
