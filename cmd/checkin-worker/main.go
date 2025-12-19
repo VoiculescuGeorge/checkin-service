@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -14,28 +13,33 @@ import (
 	legacyAPI "checkin.service/internal/worker/legacyapi"
 	"checkin.service/pkg/aws"
 	"checkin.service/pkg/database"
+	"checkin.service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
 	// Load config
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Fatalf("Could not load configuration: %v", err)
+		log.Fatal().Err(err).Msg("Could not load configuration")
 	}
+
+	// Configure structured logging
+	logger.Setup(cfg.IsLocalDev)
 
 	// DB connection
 	db, err := database.NewConnection(cfg)
 	if err != nil {
-		log.Fatalf("Error opening database: %v", err)
+		log.Fatal().Err(err).Msg("Error opening database")
 	}
 	defer db.Close()
-	log.Println("Successfully connected to the database.")
+	log.Info().Msg("Successfully connected to the database.")
 
 	// AWS SDK Config
 	awsCfg, err := aws.NewAWSConfig(context.Background(), cfg)
 	if err != nil {
-		log.Fatalf("unable to load SDK config: %v", err)
+		log.Fatal().Err(err).Msg("unable to load SDK config")
 	}
 
 	// Initialize Dependencies
@@ -58,10 +62,10 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
-	log.Println("Shutting down worker...")
+	log.Info().Msg("Shutting down worker...")
 
 	// Cancel the context to signal the worker to stop polling.
 	cancel()
 
-	log.Println("Worker exited gracefully")
+	log.Info().Msg("Worker exited gracefully")
 }

@@ -2,10 +2,10 @@ package worker
 
 import (
 	"context"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/rs/zerolog/log"
 )
 
 type SQSClient interface {
@@ -43,7 +43,7 @@ func NewWorker(client SQSClient, url string, proc Processor) *Worker {
 // Start kicks off the worker's main loop for polling the SQS queue.
 // It will run until the provided context is canceled.
 func (w *Worker) Start(ctx context.Context) {
-	log.Printf("SQS Worker started with %d concurrent processors. Polling for messages...", w.Concurrency)
+	log.Info().Int("concurrency", w.Concurrency).Msg("SQS Worker started. Polling for messages...")
 
 	messagesCh := make(chan types.Message, w.Concurrency)
 
@@ -63,7 +63,7 @@ func (w *Worker) pollMessages(ctx context.Context, messagesCh chan<- types.Messa
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Poller shutting down...")
+			log.Info().Msg("Poller shutting down...")
 			return
 		default:
 			output, err := w.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
@@ -72,10 +72,10 @@ func (w *Worker) pollMessages(ctx context.Context, messagesCh chan<- types.Messa
 				WaitTimeSeconds:     20,
 			})
 			if err != nil {
-				log.Printf("Error receiving messages: %v", err)
+				log.Error().Err(err).Msg("Error receiving messages")
 				continue
 			}
-			log.Printf("Received %d messages", len(output.Messages))
+			log.Info().Int("count", len(output.Messages)).Msg("Received messages")
 			for _, msg := range output.Messages {
 				messagesCh <- msg
 			}
@@ -96,7 +96,7 @@ func (w *Worker) handleSingleMessage(ctx context.Context, msg types.Message) {
 	shouldRetry, retryDelay, err := w.processor.Process(ctx, msg)
 
 	if err != nil && shouldRetry {
-		log.Printf("Processing failed, will retry in %d seconds. Error: %v", retryDelay, err)
+		log.Warn().Err(err).Int32("retry_delay", retryDelay).Msg("Processing failed, will retry")
 
 		_, _ = w.client.ChangeMessageVisibility(ctx, &sqs.ChangeMessageVisibilityInput{
 			QueueUrl:          &w.queueURL,
@@ -114,6 +114,6 @@ func (w *Worker) handleSingleMessage(ctx context.Context, msg types.Message) {
 		})
 	} else {
 		// An unrecoverable error occurred (e.g., bad message format).
-		log.Printf("Unrecoverable error processing message, will not retry. Error: %v", err)
+		log.Error().Err(err).Msg("Unrecoverable error processing message, will not retry")
 	}
 }
