@@ -17,6 +17,7 @@ services:
       - LABOR_SQS_QUEUE_URL=http://localstack:4566/000000000000/labor-queue
       - EMAIL_SQS_QUEUE_URL=http://localstack:4566/000000000000/email-queue
       - AWS_ENDPOINT=http://localstack:4566
+      - IS_LOCAL_DEV=true
     restart: on-failure
     networks:
       - app-network
@@ -42,6 +43,7 @@ services:
       - LABOR_SQS_QUEUE_URL=http://localstack:4566/000000000000/labor-queue
       - LEGACY_API_URL=http://legacy-api:8081
       - AWS_ENDPOINT=http://localstack:4566
+      - IS_LOCAL_DEV=true
     restart: on-failure
     networks:
       - app-network
@@ -64,6 +66,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
       - EMAIL_SQS_QUEUE_URL=http://localstack:4566/000000000000/email-queue
       - AWS_ENDPOINT=http://localstack:4566
+      - IS_LOCAL_DEV=true
     restart: on-failure
     networks:
       - app-network

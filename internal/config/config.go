@@ -20,6 +20,7 @@ type Config struct {
 	EmailSQSQueueURL string `mapstructure:"EMAIL_SQS_QUEUE_URL"`
 	AWSEndpoint      string `mapstructure:"AWS_ENDPOINT"`
 	LegacyAPIURL     string `mapstructure:"LEGACY_API_URL"`
+	IsLocalDev       bool   `mapstructure:"IS_LOCAL_DEV"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
@@ -35,6 +36,7 @@ func LoadConfig() (config Config, err error) {
 	viper.SetDefault("EMAIL_SQS_QUEUE_URL", "http://localstack:4566/000000000000/email-queue")
 	viper.SetDefault("AWS_ENDPOINT", "http://localstack:4566")
 	viper.SetDefault("LEGACY_API_URL", "http://localhost:8081/")
+	viper.SetDefault("IS_LOCAL_DEV", true)
 
 	// Read in environment variables that match the keys.
 	viper.AutomaticEnv()
