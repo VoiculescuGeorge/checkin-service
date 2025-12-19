@@ -142,6 +142,13 @@ Since SQS guarantees "at-least-once" delivery, workers perform a **Check-then-Ac
 
 This guide provides all the necessary steps to run, interact with, and verify the `checkin-service` application on your local machine using Docker Compose.
 
+### Environment Configuration: `IS_LOCAL_DEV`
+
+This project uses an `IS_LOCAL_DEV` environment variable to switch between local and production configurations for AWS services.
+
+*   When `IS_LOCAL_DEV` is `true` (the default for `docker-compose`), the application routes all AWS API calls to the **LocalStack** container. This allows for complete end-to-end testing without needing real AWS credentials.
+*   When deploying to a production environment, this variable should be set to `false`. The application will then use the standard AWS SDK credential chain to connect to real AWS services (e.g., using an IAM role).
+
 ### 1. Prerequisites
 
 Before you begin, ensure you have the following software installed:
