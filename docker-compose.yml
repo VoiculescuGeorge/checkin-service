@@ -10,7 +10,6 @@ services:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgres://user:password@db:5432/checkin_db?sslmode=disable
       - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
@@ -36,7 +35,6 @@ services:
       legacy-api:
         condition: service_started
     environment:
-      - DATABASE_URL=postgres://user:password@db:5432/checkin_db?sslmode=disable
       - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
@@ -60,7 +58,6 @@ services:
       localstack:
         condition: service_started
     environment:
-      - DATABASE_URL=postgres://user:password@db:5432/checkin_db?sslmode=disable
       - AWS_REGION=us-east-1
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
