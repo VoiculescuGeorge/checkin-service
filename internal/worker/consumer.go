@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 
+	"checkin.service/pkg/logger"
 	"checkin.service/pkg/telemetry"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -98,10 +99,12 @@ func (w *Worker) handleSingleMessage(ctx context.Context, msg types.Message) {
 	ctx, span := telemetry.StartSpanFromSQSMessage(ctx, msg)
 	defer span.End()
 
+	ctx = logger.EnrichContextWithLogger(ctx)
+
 	shouldRetry, retryDelay, err := w.processor.Process(ctx, msg)
 
 	if err != nil && shouldRetry {
-		log.Warn().Err(err).Int32("retry_delay", retryDelay).Msg("Processing failed, will retry")
+		log.Ctx(ctx).Warn().Err(err).Int32("retry_delay", retryDelay).Msg("Processing failed, will retry")
 
 		_, _ = w.client.ChangeMessageVisibility(ctx, &sqs.ChangeMessageVisibilityInput{
 			QueueUrl:          &w.queueURL,
@@ -119,6 +122,6 @@ func (w *Worker) handleSingleMessage(ctx context.Context, msg types.Message) {
 		})
 	} else {
 		// An unrecoverable error occurred (e.g., bad message format).
-		log.Error().Err(err).Msg("Unrecoverable error processing message, will not retry")
+		log.Ctx(ctx).Error().Err(err).Msg("Unrecoverable error processing message, will not retry")
 	}
 }

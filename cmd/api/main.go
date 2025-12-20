@@ -16,8 +16,8 @@ import (
 	"checkin.service/internal/ports/repository"
 	"checkin.service/pkg/aws"
 	"checkin.service/pkg/database"
+	"checkin.service/pkg/logger"
 	"checkin.service/pkg/telemetry"
-	logger "checkin.service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 	"github.com/rs/zerolog/log"
@@ -66,8 +66,17 @@ func main() {
 	// Setup router and server
 	router := api.NewRouter(*coreService)
 
+	// Middleware to inject logger with trace ID
+	loggerMiddleware := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			ctx = logger.EnrichContextWithLogger(ctx)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+
 	// Wrap the router with OpenTelemetry middleware to create spans for each request
-	handler := otelhttp.NewHandler(router, "api")
+	handler := otelhttp.NewHandler(loggerMiddleware(router), "api")
 
 	serverAddr := ":" + cfg.ServerPort
 	srv := &http.Server{

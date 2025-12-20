@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 
 	"checkin.service/internal/core"
@@ -12,6 +11,7 @@ import (
 	"checkin.service/internal/ports/messaging"
 	"checkin.service/internal/ports/repository"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/rs/zerolog/log"
 )
 
 type EmailProcessor struct {
@@ -33,7 +33,7 @@ func NewProcessor(emailService core.EmailService, repo repository.Repository) *E
 func (p *EmailProcessor) Process(ctx context.Context, msg types.Message) (bool, int32, error) {
 	var event messaging.EmailEvent
 	if err := json.Unmarshal([]byte(*msg.Body), &event); err != nil {
-		log.Printf("Failed to unmarshal email event: %v", err)
+		log.Ctx(ctx).Error().Err(err).Msg("Failed to unmarshal email event")
 		return false, 0, err // Do not retry on malformed message
 	}
 
@@ -44,7 +44,7 @@ func (p *EmailProcessor) Process(ctx context.Context, msg types.Message) (bool, 
 	}
 
 	if record.EmailStatus == model.StatusEmailCompleted {
-		log.Printf("Email for WorkingTimeID %d already sent. Skipping.", event.WorkingTimeID)
+		log.Ctx(ctx).Info().Int64("working_time_id", event.WorkingTimeID).Msg("Email already sent. Skipping.")
 		return false, 0, nil
 	}
 

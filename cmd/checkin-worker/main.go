@@ -13,8 +13,8 @@ import (
 	legacyAPI "checkin.service/internal/worker/legacyapi"
 	"checkin.service/pkg/aws"
 	"checkin.service/pkg/database"
+	"checkin.service/pkg/logger"
 	"checkin.service/pkg/telemetry"
-	logger "checkin.service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/rs/zerolog/log"
 )

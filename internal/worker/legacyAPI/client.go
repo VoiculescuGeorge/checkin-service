@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
 	"checkin.service/internal/ports/messaging"
+	"github.com/rs/zerolog/log"
 )
 
 // LegacyAPIClient contract for check-out system
@@ -56,6 +56,6 @@ func (c *HTTPClient) RecordCheckOut(ctx context.Context, event messaging.CheckOu
 		return fmt.Errorf("legacy api returned non-successful status code: %d", resp.StatusCode)
 	}
 
-	log.Printf("Successfully recorded check-out for EmployeeID %s in legacy system", event.EmployeeID)
+	log.Ctx(ctx).Info().Str("employee_id", event.EmployeeID).Msg("Successfully recorded check-out in legacy system")
 	return nil
 }
