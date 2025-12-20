@@ -16,10 +16,12 @@ import (
 	"checkin.service/internal/ports/repository"
 	"checkin.service/pkg/aws"
 	"checkin.service/pkg/database"
+	"checkin.service/pkg/telemetry"
 	logger "checkin.service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func main() {
@@ -32,8 +34,17 @@ func main() {
 	// Configure structured logging
 	logger.Setup(cfg.IsLocalDev)
 
+	// Configure OpenTelemetry Tracing
+	shutdownTracer, err := telemetry.InitTracer("checkin-api")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to init tracer")
+	}
+	defer func() {
+		_ = shutdownTracer(context.Background())
+	}()
+
 	// DB connection
-	db, err := database.NewConnection(cfg)
+	db, err := database.NewInstrumentedConnection(cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error opening database")
 	}
@@ -55,10 +66,13 @@ func main() {
 	// Setup router and server
 	router := api.NewRouter(*coreService)
 
+	// Wrap the router with OpenTelemetry middleware to create spans for each request
+	handler := otelhttp.NewHandler(router, "api")
+
 	serverAddr := ":" + cfg.ServerPort
 	srv := &http.Server{
 		Addr:    serverAddr,
-		Handler: router,
+		Handler: handler,
 	}
 
 	// Start server in a goroutine

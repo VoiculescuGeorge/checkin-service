@@ -1,4 +1,4 @@
-package legacyapi
+package legacyAPI
 
 import (
 	"bytes"

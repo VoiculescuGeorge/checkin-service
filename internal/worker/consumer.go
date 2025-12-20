@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 
+	"checkin.service/pkg/telemetry"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/rs/zerolog/log"
@@ -67,9 +68,10 @@ func (w *Worker) pollMessages(ctx context.Context, messagesCh chan<- types.Messa
 			return
 		default:
 			output, err := w.client.ReceiveMessage(ctx, &sqs.ReceiveMessageInput{
-				QueueUrl:            &w.queueURL,
-				MaxNumberOfMessages: int32(w.Concurrency), // Fetch as many messages as we have processors
-				WaitTimeSeconds:     20,
+				QueueUrl:              &w.queueURL,
+				MaxNumberOfMessages:   int32(w.Concurrency), // Fetch as many messages as we have processors
+				WaitTimeSeconds:       20,
+				MessageAttributeNames: []string{"All"}, // Request attributes to get trace context
 			})
 			if err != nil {
 				log.Error().Err(err).Msg("Error receiving messages")
@@ -93,6 +95,9 @@ func (w *Worker) processMessages(ctx context.Context, messagesCh <-chan types.Me
 // handleSingleMessage is where the real work happens for a single message. It calls the
 // processor and then decides whether to delete the message or change its visibility for a retry.
 func (w *Worker) handleSingleMessage(ctx context.Context, msg types.Message) {
+	ctx, span := telemetry.StartSpanFromSQSMessage(ctx, msg)
+	defer span.End()
+
 	shouldRetry, retryDelay, err := w.processor.Process(ctx, msg)
 
 	if err != nil && shouldRetry {

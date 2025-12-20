@@ -13,6 +13,7 @@ import (
 	"checkin.service/internal/worker/email"
 	"checkin.service/pkg/aws"
 	"checkin.service/pkg/database"
+	"checkin.service/pkg/telemetry"
 	logger "checkin.service/pkg/util"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
@@ -29,8 +30,17 @@ func main() {
 	// Configure structured logging
 	logger.Setup(cfg.IsLocalDev)
 
+	// Configure OpenTelemetry Tracing
+	shutdownTracer, err := telemetry.InitTracer("email-worker")
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to init tracer")
+	}
+	defer func() {
+		_ = shutdownTracer(context.Background())
+	}()
+
 	// DB connection
-	db, err := database.NewConnection(cfg)
+	db, err := database.NewInstrumentedConnection(cfg)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error opening database")
 	}

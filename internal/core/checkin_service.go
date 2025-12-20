@@ -62,7 +62,7 @@ func (s *CheckInService) handleCheckOut(ctx context.Context, workTime *model.Wor
 	duration := clockOut.Sub(workTime.ClockInTime)
 	hoursWorked := duration.Hours()
 
-	err := s.repo.UpdateCheckOut(ctx, workTime.ID, clockOut, hoursWorked)
+	err := s.repo.UpdateCheckOut(ctx, workTime.ID, clockOut, hoursWorked, workTime.EmployeeID)
 	if err != nil {
 		return errors.New("failed to update check-out record")
 	}
@@ -73,7 +73,7 @@ func (s *CheckInService) handleCheckOut(ctx context.Context, workTime *model.Wor
 		HoursWorked:   hoursWorked,
 		OccurredAt:    time.Now(),
 	}
-	s.producer.PublishEmailEvent(ctx, emailEvent)
+	s.producer.PublishEmail(ctx, emailEvent)
 
 	checkInOutEvent := messaging.CheckOutEvent{
 		WorkingTimeID: workTime.ID,
@@ -82,7 +82,7 @@ func (s *CheckInService) handleCheckOut(ctx context.Context, workTime *model.Wor
 		ClockOutTime:  clockOut,
 	}
 
-	err = s.producer.PublishCheckOutEvent(ctx, checkInOutEvent)
+	err = s.producer.PublishLabor(ctx, checkInOutEvent)
 
 	if err != nil {
 		return errors.New("failed to publish check-out event to queue")

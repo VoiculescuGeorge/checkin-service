@@ -6,13 +6,15 @@ import (
 	"time"
 
 	"checkin.service/internal/core/model"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Repository contract
 type Repository interface {
 	GetCheckInOut(ctx context.Context, id int64) (*model.WorkingTime, error)
 	CreateCheckIn(ctx context.Context, employeeID string, clockIn time.Time) (int64, error)
-	UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64) error
+	UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64, employeeID string) error
 	UpdateLaborStatus(ctx context.Context, id int64, status model.WorkingTimeStatus, retryCount int) error
 	FindLastCheckIn(ctx context.Context, employeeID string) (*model.WorkingTime, error)
 	GetStatus(ctx context.Context, id int64) (model.WorkingTimeStatus, error)
@@ -32,6 +34,8 @@ func NewWorkingTimeRepository(db *sql.DB) Repository {
 // CreateCheckIn create checkin.
 func (r *WorkingTimeRepository) CreateCheckIn(ctx context.Context, employeeID string, clockIn time.Time) (int64, error) {
 
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employeeId", employeeID))
+
 	var id int64
 	query := `INSERT INTO working_times (employee_id, clock_in_time, labor_status, labor_retry_count, email_status, email_retry_count) 
               VALUES ($1, $2, $3, 0, $4, 0) RETURNING id`
@@ -45,8 +49,8 @@ func (r *WorkingTimeRepository) CreateCheckIn(ctx context.Context, employeeID st
 }
 
 // UpdateCheckOut do checkout.
-func (r *WorkingTimeRepository) UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64) error {
-
+func (r *WorkingTimeRepository) UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64, employeeID string) error {
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employeeId", employeeID))
 	query := `UPDATE working_times 
               SET clock_out_time = $1, 
                   hours_worked = $2, 
@@ -73,6 +77,8 @@ func (r *WorkingTimeRepository) UpdateLaborStatus(ctx context.Context, id int64,
 
 // FindLastCheckIn get last check in for a employee
 func (r *WorkingTimeRepository) FindLastCheckIn(ctx context.Context, employeeID string) (*model.WorkingTime, error) {
+
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employeeId", employeeID))
 
 	var clockIn time.Time
 	wt := &model.WorkingTime{EmployeeID: employeeID}

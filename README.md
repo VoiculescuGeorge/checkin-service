@@ -125,9 +125,14 @@ Since SQS guarantees "at-least-once" delivery, workers perform a **Check-then-Ac
 ## 🔍 Observability Stack
 
 ### Distributed Tracing (OpenTelemetry)
-* **Propagation:** Traces are propagated across SQS using the `traceparent` message attribute.
-* **Visualization:** Connect to Jaeger or Grafana Tempo to see the full request lifecycle.
-* **Instrumentation:** Automatic instrumentation for `net/http` and `database/sql` is enabled.
+The service uses OpenTelemetry for end-to-end distributed tracing across the API and asynchronous workers.
+
+*   **Propagation:** Trace context is injected into SQS message attributes by the producer and extracted by the workers, linking the synchronous API request with the asynchronous background jobs.
+*   **Enrichment:** Spans are enriched with business attributes like `app.employeeId`, allowing you to filter traces by specific employees.
+*   **Instrumentation:**
+    *   **API:** Uses `otelhttp` middleware to automatically trace incoming HTTP requests.
+    *   **Workers:** Manual instrumentation wraps message processing to create spans for each SQS message.
+*   **Visualization:** Traces are exported via OTLP gRPC to **Jaeger** (running locally in Docker).
 
 ### Metrics (Prometheus)
 * **Endpoint:** `:2112/metrics`
@@ -255,4 +260,5 @@ docker-compose down -v
 
 --- 
 # Improvements
-- Add openTelemetry and Prometheus logic to track and create custom metrics
+- Add Prometheus logic to create custom metrics
+- Add tests

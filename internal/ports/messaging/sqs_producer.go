@@ -5,25 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"checkin.service/pkg/telemetry"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
-// SQSClient sendMessage interface based on aws sdk
 type SQSClient interface {
 	SendMessage(ctx context.Context, params *sqs.SendMessageInput, optFns ...func(*sqs.Options)) (*sqs.SendMessageOutput, error)
 }
 
-// SQSProducer SQSProducer based on aws sqs.
 type SQSProducer struct {
 	client        SQSClient
 	laborQueueURL string
 	emailQueueURL string
 }
 
-// NewSQSProducer new instance of SQS producer.
-func NewSQSProducer(client SQSClient, laborQueueURL string, emailQueueURL string) *SQSProducer {
+func NewSQSProducer(client SQSClient, laborQueueURL, emailQueueURL string) *SQSProducer {
 	return &SQSProducer{
 		client:        client,
 		laborQueueURL: laborQueueURL,
@@ -31,55 +30,43 @@ func NewSQSProducer(client SQSClient, laborQueueURL string, emailQueueURL string
 	}
 }
 
-// PublishCheckOutEvent send checkout event to the SQS queue.
-func (p *SQSProducer) PublishCheckOutEvent(ctx context.Context, event CheckOutEvent) error {
-
-	body, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("failed to marshal event: %w", err)
-	}
-
-	input := &sqs.SendMessageInput{
-		QueueUrl:    aws.String(p.laborQueueURL),
-		MessageBody: aws.String(string(body)),
-		MessageAttributes: map[string]types.MessageAttributeValue{
-			"EventType": {
-				DataType:    aws.String("String"),
-				StringValue: aws.String("CHECK_OUT"),
-			},
-		},
-	}
-
-	_, err = p.client.SendMessage(ctx, input)
-	if err != nil {
-		return fmt.Errorf("failed to send message to labor queue: %w", err)
-	}
-
-	return nil
+func (p *SQSProducer) PublishLabor(ctx context.Context, body interface{}) error {
+	return p.publish(ctx, p.laborQueueURL, body)
 }
 
-// PublishEmailEvent send email event to the SQS queue.
-func (p *SQSProducer) PublishEmailEvent(ctx context.Context, event EmailEvent) error {
+func (p *SQSProducer) PublishEmail(ctx context.Context, body interface{}) error {
+	return p.publish(ctx, p.emailQueueURL, body)
+}
 
-	body, err := json.Marshal(event)
+func (p *SQSProducer) publish(ctx context.Context, queueURL string, body interface{}) error {
+	b, err := json.Marshal(body)
 	if err != nil {
-		return fmt.Errorf("failed to marshal event: %w", err)
+		return fmt.Errorf("failed to marshal body: %w", err)
 	}
 
-	input := &sqs.SendMessageInput{
-		QueueUrl:    aws.String(p.emailQueueURL),
-		MessageBody: aws.String(string(body)),
-		MessageAttributes: map[string]types.MessageAttributeValue{
-			"EventType": {
-				DataType:    aws.String("String"),
-				StringValue: aws.String("EMAIL_SENT"),
-			},
-		},
+	// Enrich the current span with employee_id if available
+	span := trace.SpanFromContext(ctx)
+	if span.IsRecording() {
+		var payload struct {
+			EmployeeID string `json:"employeeId"`
+		}
+		// Attempt to unmarshal to extract employee_id
+		if err := json.Unmarshal(b, &payload); err == nil && payload.EmployeeID != "" {
+			span.SetAttributes(attribute.String("app.employeeId", payload.EmployeeID))
+		}
 	}
 
-	_, err = p.client.SendMessage(ctx, input)
+	// Inject trace context into message attributes
+	attributes := telemetry.InjectTraceContext(ctx)
+
+	_, err = p.client.SendMessage(ctx, &sqs.SendMessageInput{
+		QueueUrl:          aws.String(queueURL),
+		MessageBody:       aws.String(string(b)),
+		MessageAttributes: attributes,
+	})
+
 	if err != nil {
-		return fmt.Errorf("failed to send message to email queue: %w", err)
+		return fmt.Errorf("failed to send message to SQS: %w", err)
 	}
 	return nil
 }

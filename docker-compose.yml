@@ -113,6 +113,15 @@ services:
     networks:
       - app-network
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: checkin_jaeger
+    ports:
+      - "16686:16686" # Web UI
+      - "4317:4317"   # OTLP gRPC
+    networks:
+      - app-network
+
 volumes:
   checkin_db_data:
 
