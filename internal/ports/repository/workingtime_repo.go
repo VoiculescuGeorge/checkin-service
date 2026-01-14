@@ -35,6 +35,7 @@ func NewWorkingTimeRepository(db *sql.DB) Repository {
 func (r *WorkingTimeRepository) CreateCheckIn(ctx context.Context, employeeID string, clockIn time.Time) (int64, error) {
 
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employeeId", employeeID))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employee_id", employeeID))
 
 	var id int64
 	query := `INSERT INTO working_times (employee_id, clock_in_time, labor_status, labor_retry_count, email_status, email_retry_count) 
@@ -51,6 +52,7 @@ func (r *WorkingTimeRepository) CreateCheckIn(ctx context.Context, employeeID st
 // UpdateCheckOut do checkout.
 func (r *WorkingTimeRepository) UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64, employeeID string) error {
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employeeId", employeeID))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employee_id", employeeID))
 	query := `UPDATE working_times 
               SET clock_out_time = $1, 
                   hours_worked = $2, 
@@ -79,6 +81,7 @@ func (r *WorkingTimeRepository) UpdateLaborStatus(ctx context.Context, id int64,
 func (r *WorkingTimeRepository) FindLastCheckIn(ctx context.Context, employeeID string) (*model.WorkingTime, error) {
 
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employeeId", employeeID))
+	trace.SpanFromContext(ctx).SetAttributes(attribute.String("app.employee_id", employeeID))
 
 	var clockIn time.Time
 	wt := &model.WorkingTime{EmployeeID: employeeID}

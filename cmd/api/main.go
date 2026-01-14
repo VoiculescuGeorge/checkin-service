@@ -61,7 +61,7 @@ func main() {
 	sqsClient := sqs.NewFromConfig(awsCfg)
 	repo := repository.NewWorkingTimeRepository(db)
 	producer := messaging.NewSQSProducer(sqsClient, cfg.LaborSQSQueueURL, cfg.EmailSQSQueueURL)
-	coreService := checkin_service.NewCheckInService(repo, *producer)
+	coreService := checkin_service.NewCheckInService(repo, producer)
 
 	// Setup router and server
 	router := api.NewRouter(*coreService)
