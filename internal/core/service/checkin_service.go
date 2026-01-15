@@ -1,4 +1,4 @@
-package core
+package service
 
 import (
 	"context"
@@ -6,18 +6,19 @@ import (
 	"time"
 
 	"checkin.service/internal/core/model"
+	"checkin.service/internal/ports"
 	"checkin.service/internal/ports/messaging"
 	"checkin.service/internal/ports/repository"
 )
 
 type CheckInService struct {
 	repo     repository.Repository
-	producer messaging.SQSProducer
+	producer ports.Producer
 }
 
 // NewCheckInService creates a new instance of our main application service,
 // wiring up the database repository and the message queue producer.
-func NewCheckInService(repo repository.Repository, p messaging.SQSProducer) *CheckInService {
+func NewCheckInService(repo repository.Repository, p ports.Producer) *CheckInService {
 	return &CheckInService{
 		repo:     repo,
 		producer: p,

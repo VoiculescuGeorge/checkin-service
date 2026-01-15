@@ -1,4 +1,4 @@
-package messaging
+package ports
 
 import (
 	"context"
@@ -9,22 +9,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type Producer struct {
-	sender        MessageSender
-	laborQueueURL string
-	emailQueueURL string
-}
-
 func NewProducer(sender MessageSender, laborQueueURL, emailQueueURL string) *Producer {
 	return &Producer{
 		sender:        sender,
 		laborQueueURL: laborQueueURL,
 		emailQueueURL: emailQueueURL,
 	}
-}
-
-func NewSQSProducer(client SQSClient, laborQueueURL, emailQueueURL string) *Producer {
-	return NewProducer(&SQSSender{client: client}, laborQueueURL, emailQueueURL)
 }
 
 func (p *Producer) PublishLabor(ctx context.Context, body interface{}) error {

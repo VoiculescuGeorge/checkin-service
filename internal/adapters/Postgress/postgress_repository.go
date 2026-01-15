@@ -1,4 +1,4 @@
-package repository
+package postgress
 
 import (
 	"context"
@@ -6,20 +6,10 @@ import (
 	"time"
 
 	"checkin.service/internal/core/model"
+	"checkin.service/internal/ports/repository"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
-
-// Repository contract
-type Repository interface {
-	GetCheckInOut(ctx context.Context, id int64) (*model.WorkingTime, error)
-	CreateCheckIn(ctx context.Context, employeeID string, clockIn time.Time) (int64, error)
-	UpdateCheckOut(ctx context.Context, id int64, clockOut time.Time, hoursWorked float64, employeeID string) error
-	UpdateLaborStatus(ctx context.Context, id int64, status model.WorkingTimeStatus, retryCount int) error
-	FindLastCheckIn(ctx context.Context, employeeID string) (*model.WorkingTime, error)
-	GetStatus(ctx context.Context, id int64) (model.WorkingTimeStatus, error)
-	UpdateEmailStatus(ctx context.Context, id int64, status model.EmailStatus, retryCount int) error
-}
 
 // WorkingTimeRepository is the concrete implementation for a PostgreSQL database.
 type WorkingTimeRepository struct {
@@ -27,7 +17,7 @@ type WorkingTimeRepository struct {
 }
 
 // NewWorkingTimeRepository create new instance
-func NewWorkingTimeRepository(db *sql.DB) Repository {
+func NewWorkingTimeRepository(db *sql.DB) repository.Repository {
 	return &WorkingTimeRepository{DB: db}
 }
 

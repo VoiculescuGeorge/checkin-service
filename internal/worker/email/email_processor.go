@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math"
 
-	"checkin.service/internal/core"
 	"checkin.service/internal/core/model"
+	core "checkin.service/internal/core/service"
 	"checkin.service/internal/ports/messaging"
 	"checkin.service/internal/ports/repository"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"

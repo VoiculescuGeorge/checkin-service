@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	sqsadapter "checkin.service/internal/adapters/SQS"
+	postgress "checkin.service/internal/adapters/postgress"
 	"checkin.service/internal/api"
 	"checkin.service/internal/config"
-	checkin_service "checkin.service/internal/core"
-	"checkin.service/internal/ports/messaging"
-	"checkin.service/internal/ports/repository"
+	checkin_service "checkin.service/internal/core/service"
 	"checkin.service/pkg/aws"
 	"checkin.service/pkg/database"
 	"checkin.service/pkg/logger"
@@ -59,9 +59,9 @@ func main() {
 
 	// Initialize dependencies
 	sqsClient := sqs.NewFromConfig(awsCfg)
-	repo := repository.NewWorkingTimeRepository(db)
-	producer := messaging.NewSQSProducer(sqsClient, cfg.LaborSQSQueueURL, cfg.EmailSQSQueueURL)
-	coreService := checkin_service.NewCheckInService(repo, producer)
+	repo := postgress.NewWorkingTimeRepository(db)
+	producer := sqsadapter.NewSQSProducer(sqsClient, cfg.LaborSQSQueueURL, cfg.EmailSQSQueueURL)
+	coreService := checkin_service.NewCheckInService(repo, *producer)
 
 	// Setup router and server
 	router := api.NewRouter(*coreService)

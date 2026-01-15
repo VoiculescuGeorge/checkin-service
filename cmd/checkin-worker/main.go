@@ -6,8 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	postgress "checkin.service/internal/adapters/Postgress"
 	"checkin.service/internal/config"
-	"checkin.service/internal/ports/repository"
 	"checkin.service/internal/worker"
 	"checkin.service/internal/worker/labor"
 	legacyAPI "checkin.service/internal/worker/legacyapi"
@@ -55,7 +55,7 @@ func main() {
 	// Initialize Dependencies
 	sqsClient := sqs.NewFromConfig(awsCfg)
 
-	repo := repository.NewWorkingTimeRepository(db)
+	repo := postgress.NewWorkingTimeRepository(db)
 
 	legacyClient := legacyAPI.NewHTTPClient(cfg.LegacyAPIURL)
 	processor := labor.NewProcessor(repo, legacyClient)

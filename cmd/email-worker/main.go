@@ -6,9 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	postgress "checkin.service/internal/adapters/Postgress"
 	"checkin.service/internal/config"
-	"checkin.service/internal/core"
-	"checkin.service/internal/ports/repository"
+	"checkin.service/internal/core/service"
 	"checkin.service/internal/worker"
 	"checkin.service/internal/worker/email"
 	"checkin.service/pkg/aws"
@@ -56,8 +56,8 @@ func main() {
 	// Initialize Dependencies
 	sqsClient := sqs.NewFromConfig(awsCfg)
 	sesClient := ses.NewFromConfig(awsCfg)
-	repo := repository.NewWorkingTimeRepository(db)
-	emailService := core.NewSESEmailService(sesClient, "checkOut@checkout-service.com")
+	repo := postgress.NewWorkingTimeRepository(db)
+	emailService := service.NewSESEmailService(sesClient, "checkOut@checkout-service.com")
 	processor := email.NewProcessor(emailService, repo)
 
 	// Start Worker
